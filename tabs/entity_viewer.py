@@ -152,7 +152,38 @@ def window():
     else:
         map_list = list_maps(maps)
         layout.addWidget(map_list)
+
+    search_bar = QtWidgets.QLineEdit(widget)
+    search_bar.setPlaceholderText("Search entities and properties...")
+    layout.addWidget(search_bar)
+    search_bar.setEnabled(bool(maps))
+
+    if maps:
         layout.addWidget(entity_tree)
+
+        def filter_entities(search_text):
+            search_text = search_text.casefold()
+
+            def filter_item(item, parent_matches=False):
+                item_matches = not search_text or any(
+                    search_text in item.text(column).casefold()
+                    for column in range(item.columnCount())
+                )
+                reveal_children = parent_matches or item_matches
+                child_matches = False
+                for child_index in range(item.childCount()):
+                    child = item.child(child_index)
+                    if filter_item(child, reveal_children):
+                        child_matches = True
+                item.setHidden(not (parent_matches or item_matches or child_matches))
+                if search_text and (item_matches or child_matches):
+                    item.setExpanded(True)
+                return parent_matches or item_matches or child_matches
+
+            for root_index in range(entity_tree.topLevelItemCount()):
+                filter_item(entity_tree.topLevelItem(root_index))
+
+        search_bar.textChanged.connect(filter_entities)
 
         def load_selected_map():
             selected_item = map_list.currentItem()
@@ -216,6 +247,7 @@ def window():
                                         [field_name, field_value]
                                     )
                                 )
+            filter_entities(search_bar.text())
 
         map_list.currentItemChanged.connect(load_selected_map)
     return widget

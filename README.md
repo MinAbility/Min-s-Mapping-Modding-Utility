@@ -1,15 +1,14 @@
-WIP Portal 2 Multitool script
+# Min's Modding & Mapping Tool
 
 
 # Features
 - Recompiles & Decompiles BSP files
-
+- Able to view entity and materials inside a given VMF
 
 
 # TO-DO/In Progress
 
 
-- Entity list - Tell how many entities are inside a given VMF and at what coordinates
 - Automation Scripts - Provide it a script and a map and make the corresponding changes
 - Modularity - Add a menu where you can give it a "plug-in" and have it add a tab correspondingly
 - Repacking/Unpacking VMF's
