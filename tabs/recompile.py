@@ -1,12 +1,9 @@
 import json
 import sys
 from pathlib import Path
-
 from PySide6 import QtCore, QtGui, QtWidgets
 
-
 SETTINGS_FILENAME = "settings.json"
-
 
 def _load_all_settings():
     settings_path = Path(SETTINGS_FILENAME)
@@ -27,8 +24,6 @@ def get_setting(setting_name):
 
 
 def resolve_portal2_paths(root_value):
-    """Accept either the Portal 2 install root (containing bin/ and portal2/)
-    or the portal2 game-content folder itself. Returns (game_dir, bin_dir, note)."""
     if not root_value:
         return None, None, "no value set"
 
@@ -36,15 +31,12 @@ def resolve_portal2_paths(root_value):
     if not root.exists():
         return None, None, f"path does not exist: {root}"
 
-    # Layout A: root contains both bin/ and portal2/
     if (root / "bin").exists() and (root / "portal2").exists():
         return root / "portal2", root / "bin", f"resolved as install root: {root}"
 
-    # Layout B: pointed directly at the portal2/ content folder
     if root.name.lower() == "portal2" and (root.parent / "bin").exists():
         return root, root.parent / "bin", f"resolved as game folder, bin at: {root.parent / 'bin'}"
 
-    # Layout C: pointed directly at the bin/ folder
     if root.name.lower() == "bin" and (root.parent / "portal2").exists():
         return root.parent / "portal2", root, f"resolved as bin folder, game at: {root.parent / 'portal2'}"
 
@@ -67,7 +59,6 @@ def return_maps():
 
 
 class CompileOptionsDialog(QtWidgets.QDialog):
-    """Modal dialog asking how each compile stage (BSP, VIS, RAD) should run."""
 
     def __init__(self, map_name, parent=None):
         super().__init__(parent)
@@ -151,9 +142,6 @@ class CompileOptionsDialog(QtWidgets.QDialog):
 
 
 class MapCompilerTab(QtWidgets.QWidget):
-    """A tab that lists VMF files and compiles the selected one via
-    VBSP -> VVIS -> VRAD, streaming output to a log view."""
-
     STEPS = ["vbsp", "vvis", "vrad"]
 
     def __init__(self, parent=None):
@@ -173,8 +161,6 @@ class MapCompilerTab(QtWidgets.QWidget):
         self._build_ui()
         self._load_settings()
         self._populate_maps()
-
-    # ---------- UI ----------
 
     def _build_ui(self):
         layout = QtWidgets.QVBoxLayout(self)
@@ -227,8 +213,6 @@ class MapCompilerTab(QtWidgets.QWidget):
 
         self.status_label = QtWidgets.QLabel("")
         layout.addWidget(self.status_label)
-
-    # ---------- Settings / data ----------
 
     def _load_settings(self):
         all_settings, settings_path = _load_all_settings()
