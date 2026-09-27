@@ -18,3 +18,7 @@ WIP Portal 2 Multitool script
   # Dependencies
 
 This tool relies off of [BSPSRC](https://github.com/ata4/bspsrc) and [VPKEdit](https://github.com/craftablescience/VPKEdit)
+
+
+
+A dedicated Windows installer is planned in the future, same for Linux
