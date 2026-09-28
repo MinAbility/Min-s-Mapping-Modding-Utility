@@ -20,6 +20,8 @@ def _load_all_settings():
 
 def get_setting(setting_name):
     data, _ = _load_all_settings()
+    if setting_name == "Map Output":
+        return data.get("Map Output", data.get("Map Output Path"))
     return data.get(setting_name)
 
 
@@ -44,7 +46,7 @@ def resolve_portal2_paths(root_value):
 
 
 def return_maps():
-    maps_path = get_setting("Map Output Path")
+    maps_path = get_setting("Map Output")
     if not maps_path:
         return []
 
@@ -172,6 +174,11 @@ class MapCompilerTab(QtWidgets.QWidget):
         left = QtWidgets.QWidget()
         left_layout = QtWidgets.QVBoxLayout(left)
 
+        self.map_search = QtWidgets.QLineEdit()
+        self.map_search.setPlaceholderText("Search maps...")
+        self.map_search.textChanged.connect(self._filter_maps)
+        left_layout.addWidget(self.map_search)
+
         self.list_widget = QtWidgets.QListWidget()
         font = self.list_widget.font()
         font.setPixelSize(18)
@@ -217,7 +224,7 @@ class MapCompilerTab(QtWidgets.QWidget):
     def _load_settings(self):
         all_settings, settings_path = _load_all_settings()
 
-        maps_path = all_settings.get("Map Output Path")
+        maps_path = all_settings.get("Map Output", all_settings.get("Map Output Path"))
         self.maps_dir = Path(maps_path) if maps_path else None
 
         game_root = all_settings.get("Portal 2 Bin")
@@ -228,7 +235,7 @@ class MapCompilerTab(QtWidgets.QWidget):
         status_parts.append(f"keys found: {list(all_settings.keys()) or 'none'}")
 
         if not self.maps_dir or not self.maps_dir.exists():
-            status_parts.append("Map Output Path: missing or invalid")
+            status_parts.append("Map Output: missing or invalid")
         if not self.bin_dir:
             status_parts.append(f"Portal 2 Directory: {resolve_note}")
         else:
@@ -255,6 +262,16 @@ class MapCompilerTab(QtWidgets.QWidget):
             item = QtWidgets.QListWidgetItem(rel_path)
             item.setData(QtCore.Qt.UserRole, str(self.maps_dir / rel_path))
             self.list_widget.addItem(item)
+        self._filter_maps(self.map_search.text())
+
+    def _filter_maps(self, search_text):
+        query = search_text.casefold().strip()
+        for index in range(self.list_widget.count()):
+            item = self.list_widget.item(index)
+            item.setHidden(query not in item.text().casefold())
+        current_item = self.list_widget.currentItem()
+        if current_item and current_item.isHidden():
+            self.list_widget.setCurrentRow(-1)
 
     def _update_button_state(self):
         has_selection = bool(self.list_widget.selectedItems())

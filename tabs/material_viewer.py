@@ -3,6 +3,7 @@ import sys
 import json
 from pathlib import Path
 from PySide6 import QtWidgets, QtCore
+from tabs.map_browser import MapBrowser
 
 
 def get_setting(setting_name):
@@ -12,13 +13,15 @@ def get_setting(setting_name):
     try:
         with settings_path.open("r", encoding="utf-8") as settings_file:
             data = json.load(settings_file)
+            if setting_name == "Map Output":
+                return data.get("Map Output", data.get("Map Output Path"))
             return data.get(setting_name)
     except (OSError, json.JSONDecodeError) as error:
         print(f"Could not read settings: {error}", file=sys.stderr)
         return None
 
 def return_maps():
-    maps_path = get_setting("Map Output Path")
+    maps_path = get_setting("Map Output")
     if not maps_path:
         return []
 
@@ -88,16 +91,11 @@ def parse_material(material_path):
     return materials
 
 def window():
-    maps = return_maps()
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QVBoxLayout(widget)
-
-    if not maps:
-        map_list = None
-        layout.addWidget(QtWidgets.QLabel("No materials found in the specified output path."))
-    else:
-        map_list = list_maps(maps)
-        layout.addWidget(map_list)
+    map_browser = MapBrowser(return_maps, widget)
+    map_list = map_browser.list_widget
+    layout.addWidget(map_browser, stretch=1)
 
     search_bar = QtWidgets.QLineEdit(widget)
     search_bar.setPlaceholderText("Search materials...")
@@ -119,32 +117,36 @@ def window():
 
     search_bar.textChanged.connect(filter_materials)
 
-    if maps:
-        def load_selected_map():
-            selected_item = map_list.currentItem()
-            maps_path = get_setting("Map Output Path")
-            if selected_item is None or not maps_path:
-                return
-
-            map_path = Path(maps_path).expanduser() / selected_item.text()
-            try:
-                materials = parse_material(map_path)
-            except (OSError, UnicodeDecodeError) as error:
-                widget.selected_map_path = None
-                widget.parsed_materials = None
-                material_list.clear()
-                material_list.addItem(f"Could not read {map_path}: {error}")
-                return
-
-            widget.selected_map_path = map_path
-            widget.parsed_materials = materials
+    def load_selected_map():
+        selected_item = map_list.currentItem()
+        maps_path = get_setting("Map Output")
+        if selected_item is None:
+            widget.selected_map_path = None
+            widget.parsed_materials = None
             material_list.clear()
-            if materials:
-                material_list.addItems(materials)
-            else:
-                material_list.addItem("No materials found in this map.")
-            filter_materials(search_bar.text())
+            return
+        if not maps_path:
+            return
 
-        map_list.currentItemChanged.connect(load_selected_map)
+        map_path = Path(maps_path).expanduser() / selected_item.text()
+        try:
+            materials = parse_material(map_path)
+        except (OSError, UnicodeDecodeError) as error:
+            widget.selected_map_path = None
+            widget.parsed_materials = None
+            material_list.clear()
+            material_list.addItem(f"Could not read {map_path}: {error}")
+            return
+
+        widget.selected_map_path = map_path
+        widget.parsed_materials = materials
+        material_list.clear()
+        if materials:
+            material_list.addItems(materials)
+        else:
+            material_list.addItem("No materials found in this map.")
+        filter_materials(search_bar.text())
+
+    map_list.currentItemChanged.connect(load_selected_map)
 
     return widget

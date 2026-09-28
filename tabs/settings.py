@@ -4,6 +4,9 @@ import sys
 
 from PySide6 import QtWidgets
 
+# Add a setting for bspsrc exe path
+
+
 def load_settings(json_path="settings.json"):
     settings_path = Path(json_path)
     if not settings_path.exists():
@@ -25,7 +28,10 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
     for name in input_names:
         input_field = QtWidgets.QLineEdit(widget)
         input_field.setObjectName(name)
-        input_field.setText(str(saved_settings.get(name, "")))
+        value = saved_settings.get(name)
+        if name == "Map Output" and value is None:
+            value = saved_settings.get("Map Output Path", "")
+        input_field.setText(str(value if value is not None else ""))
         inputs[name] = input_field
         layout.addRow(name, input_field)
 
@@ -35,9 +41,20 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
     layout.addRow(status_label)
 
     def save_settings():
-        data = {name: field.text() for name, field in inputs.items()}
         try:
-            with Path(json_path).open("w", encoding="utf-8") as settings_file:
+            settings_path = Path(json_path)
+            try:
+                with settings_path.open("r", encoding="utf-8") as settings_file:
+                    data = json.load(settings_file)
+                    if not isinstance(data, dict):
+                        data = {}
+            except (OSError, json.JSONDecodeError):
+                data = {}
+
+            data.update({name: field.text() for name, field in inputs.items()})
+            if "Map Output" in inputs:
+                data.pop("Map Output Path", None)
+            with settings_path.open("w", encoding="utf-8") as settings_file:
                 json.dump(data, settings_file, indent=2)
                 settings_file.write("\n")
         except OSError as error:

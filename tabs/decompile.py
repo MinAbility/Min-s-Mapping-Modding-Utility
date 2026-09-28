@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import sys
 from PySide6 import QtWidgets, QtCore, QtGui
+from tabs.map_browser import MapBrowser
 
 def get_setting(setting_name):
     settings_path = Path("settings.json")
@@ -11,13 +12,15 @@ def get_setting(setting_name):
     try:
         with settings_path.open("r", encoding="utf-8") as settings_file:
             data = json.load(settings_file)
+            if setting_name == "Map Output":
+                return data.get("Map Output", data.get("Map Output Path"))
             return data.get(setting_name)
     except (OSError, json.JSONDecodeError) as error:
         print(f"Could not read settings: {error}", file=sys.stderr)
         return None
 
 def return_maps():
-    maps_path = get_setting("Map Output Path")
+    maps_path = get_setting("Map Output")
     if not maps_path:
         return []
 
@@ -43,16 +46,11 @@ def list_maps(maps):
     return widget
 
 def window():
-    maps = return_maps()
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QVBoxLayout(widget)
-
-    if not maps:
-        map_list = None
-        layout.addWidget(QtWidgets.QLabel("No maps found in the specified output path."))
-    else:
-        map_list = list_maps(maps)
-        layout.addWidget(map_list)
+    map_browser = MapBrowser(return_maps, widget)
+    map_list = map_browser.list_widget
+    layout.addWidget(map_browser, stretch=1)
 
     decompile_button = QtWidgets.QPushButton("Decompile", widget)
     decompile_button.setEnabled(False)
@@ -78,23 +76,29 @@ def window():
     def start_decompile():
         nonlocal output_path
         selected_item = map_list.currentItem()
-        maps_path = get_setting("Map Output Path")
+        maps_path = get_setting("Map Output")
         if not selected_item or not maps_path:
-            status_label.setText("Select a map and set the Map Output Path.")
+            status_label.setText("Select a map and set the Map Output.")
             return
 
         maps_directory = Path(maps_path).expanduser()
         map_path = maps_directory / selected_item.text()
         output_path = map_path.with_suffix(".vmf")
         process_output.clear()
-        process.start("bspsrc", [f"--output={output_path}", str(map_path)])
+        if os.name == 'nt':
+            bspsrc_path = get_setting("BSPSRC Path (Windows)")
+            if not bspsrc_path:
+                status_label.setText("Set the BSPSRC Path (Windows) in settings.")
+                return
+            process.start(bspsrc_path, [f"--output={output_path}", str(map_path)])
+        else:
+            process.start("bspsrc", [f"--output={output_path}", str(map_path)])
         status_label.setText(f"Starting decompile for {selected_item.text()}...")
 
-    if map_list is not None:
-        map_list.itemSelectionChanged.connect(
-            lambda: decompile_button.setEnabled(map_list.currentItem() is not None)
-        )
-        decompile_button.clicked.connect(start_decompile)
+    map_list.itemSelectionChanged.connect(
+        lambda: decompile_button.setEnabled(map_list.currentItem() is not None)
+    )
+    decompile_button.clicked.connect(start_decompile)
 
     process.readyReadStandardOutput.connect(capture_process_output)
     process.readyReadStandardError.connect(capture_process_output)
