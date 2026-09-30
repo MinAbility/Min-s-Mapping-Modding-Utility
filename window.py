@@ -16,7 +16,7 @@ class Window(QtWidgets.QWidget):
         self.tabs.addTab(ev.window(), "Entity Viewer")
         self.tabs.addTab(mv.window(), "Material Viewer")
         self.tabs.addTab(
-            settings.SettingsWindow(("Portal 2 Bin", "Map Input", "Map Output", "BSPSRC Jar File Path", "")),
+            settings.SettingsWindow(("Portal 2 Bin", "Map Input", "Map Output", "BSPSRC Jar File Path")),
             "Settings",
         )
         self.script_manager = addscript.window()
