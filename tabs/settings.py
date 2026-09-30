@@ -4,12 +4,13 @@ import sys
 
 from PySide6 import QtWidgets
 from tabs.map_browser import SHOW_BOTH_PATHS_SETTING, paths_differ
+from paths import SETTINGS_PATH
 
 # Add a setting for bspsrc exe path
 
 
-def load_settings(json_path="settings.json"):
-    settings_path = Path(json_path)
+def load_settings(json_path=None):
+    settings_path = Path(json_path) if json_path is not None else SETTINGS_PATH
     if not settings_path.exists():
         return {}
     try:
@@ -20,11 +21,12 @@ def load_settings(json_path="settings.json"):
         print(f"Could not read settings: {error}", file=sys.stderr)
         return {}
 
-def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
+def SettingsWindow(input_names=("Setting 1",), json_path=None):
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QFormLayout(widget)
     inputs = {}
-    saved_settings = load_settings(json_path)
+    settings_path = Path(json_path) if json_path is not None else SETTINGS_PATH
+    saved_settings = load_settings(settings_path)
 
     for name in input_names:
         input_field = QtWidgets.QLineEdit(widget)
@@ -64,7 +66,6 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
 
     def save_settings():
         try:
-            settings_path = Path(json_path)
             try:
                 with settings_path.open("r", encoding="utf-8") as settings_file:
                     data = json.load(settings_file)
@@ -77,13 +78,14 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
             data[SHOW_BOTH_PATHS_SETTING] = both_paths_checkbox.isChecked()
             if "Map Output" in inputs:
                 data.pop("Map Output Path", None)
+            settings_path.parent.mkdir(parents=True, exist_ok=True)
             with settings_path.open("w", encoding="utf-8") as settings_file:
                 json.dump(data, settings_file, indent=2)
                 settings_file.write("\n")
         except OSError as error:
             status_label.setText(f"Could not save settings: {error}")
         else:
-            status_label.setText(f"Saved to {json_path}")
+            status_label.setText(f"Saved to {settings_path}")
 
     save_button.clicked.connect(save_settings)
 

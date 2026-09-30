@@ -2,11 +2,11 @@ import json
 import sys
 from pathlib import Path
 from PySide6 import QtCore, QtGui, QtWidgets
+from paths import SETTINGS_PATH
 
-SETTINGS_FILENAME = "settings.json"
 
 def _load_all_settings():
-    settings_path = Path(SETTINGS_FILENAME)
+    settings_path = SETTINGS_PATH
     if not settings_path.exists():
         return {}, settings_path
     try:

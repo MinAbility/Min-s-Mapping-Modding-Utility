@@ -2,9 +2,9 @@ import json
 from pathlib import Path
 
 from PySide6 import QtCore, QtWidgets
+from paths import SETTINGS_PATH
 
 
-SETTINGS_PATH = Path("settings.json")
 SCRIPTS_KEY = "Custom Scripts"
 
 
@@ -29,6 +29,7 @@ def save_scripts(scripts):
 
     settings[SCRIPTS_KEY] = scripts
     try:
+        SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
         with SETTINGS_PATH.open("w", encoding="utf-8") as settings_file:
             json.dump(settings, settings_file, indent=2)
             settings_file.write("\n")

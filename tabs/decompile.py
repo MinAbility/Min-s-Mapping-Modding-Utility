@@ -1,12 +1,14 @@
 import json
 import os
 from pathlib import Path
+import shutil
 import sys
 from PySide6 import QtWidgets, QtCore, QtGui
 from tabs.map_browser import MapBrowser, load_map_files
+from paths import SETTINGS_PATH
 
 def get_setting(setting_name):
-    settings_path = Path(__file__).resolve().parents[1] / "settings.json"
+    settings_path = SETTINGS_PATH
     if not settings_path.exists():
         return None
     try:
@@ -154,28 +156,31 @@ def window():
             bspsrc_arguments.append("--unpack_embedded")
         bspsrc_arguments.append(str(map_path))
 
-        if os.name == 'nt':
-            jar_setting = get_setting("BSPSRC Jar Path (Windows)")
-            bspsrc_jar = (
-                Path(jar_setting).expanduser()
-                if jar_setting
-                else Path(__file__).with_name("bspsrc-jar-only") / "bspsrc.jar"
-            )
-            if not bspsrc_jar.is_file():
-                status_label.setText(
-                    f"BSPSrc JAR not found: {bspsrc_jar}. Set its path in Settings."
-                )
-                return
-            process.start(
-                "java",
-                [
-                    "-cp",
-                    str(bspsrc_jar),
-                    "info.ata4.bspsrc.app.src.BspSourceLauncher",
-                ] + bspsrc_arguments,
-            )
-        else:
-            process.start("bspsrc", bspsrc_arguments)
+        bundled_jar_candidates = (
+            Path(__file__).with_name("bspsrc-jar-only") / "bspsrc.jar",
+            Path(__file__).with_name("bspsrc.jar"),
+        )
+        bspsrc_jar = next(
+            (candidate for candidate in bundled_jar_candidates if candidate.is_file()),
+            bundled_jar_candidates[0],
+        )
+        if not bspsrc_jar.is_file():
+            status_label.setText(f"Bundled BSPSrc JAR not found: {bspsrc_jar}")
+            return
+
+        java_executable = shutil.which("java")
+        if not java_executable:
+            status_label.setText("Java Runtime missing, please install it before continuing")
+            return
+
+        process.start(
+            java_executable,
+            [
+                "-cp",
+                str(bspsrc_jar),
+                "info.ata4.bspsrc.app.src.BspSourceLauncher",
+            ] + bspsrc_arguments,
+        )
         status_label.setText(f"Starting decompile for {selected_item.text()}...")
 
     map_list.itemSelectionChanged.connect(

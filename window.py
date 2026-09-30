@@ -17,7 +17,7 @@ class Window(QtWidgets.QWidget):
         self.tabs.addTab(mv.window(), "Material Viewer")
         self.tabs.addTab(gel.window(), "Gel Script")
         self.tabs.addTab(
-            settings.SettingsWindow(("Portal 2 Bin", "Map Input", "Map Output", "BSPSRC Jar Path (Windows)", "")),
+            settings.SettingsWindow(("Portal 2 Bin", "Map Input", "Map Output", "")),
             "Settings",
         )
         self.script_manager = addscript.window()

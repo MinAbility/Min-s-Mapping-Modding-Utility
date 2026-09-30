@@ -4,9 +4,10 @@ import json
 from pathlib import Path
 from PySide6 import QtWidgets, QtCore
 from tabs.map_browser import MapBrowser, load_map_files
+from paths import SETTINGS_PATH
 
 def get_setting(setting_name):
-    settings_path = Path("settings.json")
+    settings_path = SETTINGS_PATH
     if not settings_path.exists():
         return None
     try:

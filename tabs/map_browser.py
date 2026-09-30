@@ -2,9 +2,9 @@ import json
 import os
 from pathlib import Path
 from PySide6 import QtCore, QtWidgets
+from paths import SETTINGS_PATH
 
 
-SETTINGS_PATH = Path(__file__).resolve().parents[1] / "settings.json"
 SHOW_BOTH_PATHS_SETTING = "Show maps from both paths"
 
 
