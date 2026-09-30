@@ -1,6 +1,6 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 import sys
-from tabs import decompile, recompile, settings, entity_viewer as ev, material_viewer as mv, addscript, gel
+from tabs import decompile, recompile, settings, entity_viewer as ev, material_viewer as mv, addscript
 from tabs.map_browser import MapBrowser
 class Window(QtWidgets.QWidget):
     def __init__(self):
