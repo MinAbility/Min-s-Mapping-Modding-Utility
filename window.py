@@ -14,7 +14,6 @@ class Window(QtWidgets.QWidget):
         self.tabs.addTab(recompile.window(), "Recompile")
         self.tabs.addTab(ev.window(), "Entity Viewer")
         self.tabs.addTab(mv.window(), "Material Viewer")
-        self.tabs.addTab(gel.window(), "Gel Script")
         self.tabs.addTab(
             settings.SettingsWindow(("Portal 2 Bin", "Map Output", "BSPSRC Path (Windows)")),
             "Settings",
