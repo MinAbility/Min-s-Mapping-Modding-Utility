@@ -34,9 +34,34 @@ def SettingsWindow(input_names=("Setting 1",), json_path=None):
         value = saved_settings.get(name)
         if name == "Map Output" and value is None:
             value = saved_settings.get("Map Output Path", "")
+        elif name == "BSPSRC Jar File Path" and value is None:
+            value = saved_settings.get(
+                "BSPSRC Jar Path",
+                saved_settings.get("BSPSRC Jar Path (Windows)", ""),
+            )
         input_field.setText(str(value if value is not None else ""))
         inputs[name] = input_field
-        layout.addRow(name, input_field)
+        if name == "BSPSRC Jar File Path":
+            row = QtWidgets.QWidget(widget)
+            row_layout = QtWidgets.QHBoxLayout(row)
+            row_layout.setContentsMargins(0, 0, 0, 0)
+            row_layout.addWidget(input_field)
+            browse_button = QtWidgets.QPushButton("Browse...", row)
+            browse_button.clicked.connect(
+                lambda _checked=False, field=input_field: field.setText(
+                    QtWidgets.QFileDialog.getOpenFileName(
+                        widget,
+                        "Select BSPSrc JAR",
+                        field.text() or str(Path.home()),
+                        "Java archives (*.jar)",
+                    )[0]
+                    or field.text()
+                )
+            )
+            row_layout.addWidget(browse_button)
+            layout.addRow(name, row)
+        else:
+            layout.addRow(name, input_field)
 
     both_paths_checkbox = QtWidgets.QCheckBox("Show maps from both paths", widget)
     both_paths_checkbox.setChecked(

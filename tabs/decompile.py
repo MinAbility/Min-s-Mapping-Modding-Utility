@@ -156,16 +156,17 @@ def window():
             bspsrc_arguments.append("--unpack_embedded")
         bspsrc_arguments.append(str(map_path))
 
-        bundled_jar_candidates = (
-            Path(__file__).with_name("bspsrc-jar-only") / "bspsrc.jar",
-            Path(__file__).with_name("bspsrc.jar"),
+        jar_setting = (
+            get_setting("BSPSRC Jar File Path")
+            or get_setting("BSPSRC Jar Path")
+            or get_setting("BSPSRC Jar Path (Windows)")
         )
-        bspsrc_jar = next(
-            (candidate for candidate in bundled_jar_candidates if candidate.is_file()),
-            bundled_jar_candidates[0],
-        )
-        if not bspsrc_jar.is_file():
-            status_label.setText(f"Bundled BSPSrc JAR not found: {bspsrc_jar}")
+        if not jar_setting:
+            status_label.setText("Set the BSPSRC Jar File Path in Settings before decompiling.")
+            return
+        bspsrc_jar = Path(jar_setting).expanduser()
+        if not bspsrc_jar.is_file() or bspsrc_jar.suffix.casefold() != ".jar":
+            status_label.setText(f"BSPSrc JAR not found or invalid: {bspsrc_jar}")
             return
 
         java_executable = shutil.which("java")
