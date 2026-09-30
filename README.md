@@ -16,7 +16,7 @@
 
   # Dependencies
 
-This tool relies off of [BSPSRC](https://github.com/ata4/bspsrc) and [VPKEdit](https://github.com/craftablescience/VPKEdit)
+This tool relies off of [BSPSRC](https://github.com/ata4/bspsrc) and [VPKEdit](https://github.com/craftablescience/VPKEdit/releases)
 
 
 

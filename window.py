@@ -1,6 +1,7 @@
 from PySide6 import QtWidgets, QtCore, QtGui
 import sys
 from tabs import decompile, recompile, settings, entity_viewer as ev, material_viewer as mv, addscript, gel
+from tabs.map_browser import MapBrowser
 class Window(QtWidgets.QWidget):
     def __init__(self):
         super().__init__()
@@ -16,11 +17,12 @@ class Window(QtWidgets.QWidget):
         self.tabs.addTab(mv.window(), "Material Viewer")
         self.tabs.addTab(gel.window(), "Gel Script")
         self.tabs.addTab(
-            settings.SettingsWindow(("Portal 2 Bin", "Map Output", "BSPSRC Path (Windows)")),
+            settings.SettingsWindow(("Portal 2 Bin", "Map Input", "Map Output", "BSPSRC Jar Path (Windows)", "")),
             "Settings",
         )
         self.script_manager = addscript.window()
         self.tabs.addTab(self.script_manager, "Add Script")
+        self.tabs.currentChanged.connect(self._refresh_current_map_browser)
         self.layout = QtWidgets.QVBoxLayout(self)
         self.setWindowTitle(self.window_title)
         self.layout.addWidget(self.toolbar)
@@ -52,6 +54,12 @@ class Window(QtWidgets.QWidget):
         reset_shortcut.setContext(QtCore.Qt.WidgetWithChildrenShortcut)
         reset_shortcut.activated.connect(lambda: self._set_zoom(1.0))
         self._zoom_shortcuts.append(reset_shortcut)
+
+    def _refresh_current_map_browser(self, index):
+        current_tab = self.tabs.widget(index)
+        map_browser = current_tab.findChild(MapBrowser) if current_tab else None
+        if map_browser is not None:
+            map_browser.refresh()
 
     def add_script_action(self, script_path):
         if script_path in self.script_actions:

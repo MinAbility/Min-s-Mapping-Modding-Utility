@@ -3,7 +3,7 @@ import sys
 import json
 from pathlib import Path
 from PySide6 import QtWidgets, QtCore
-from tabs.map_browser import MapBrowser
+from tabs.map_browser import MapBrowser, load_map_files
 
 def get_setting(setting_name):
     settings_path = Path("settings.json")
@@ -19,19 +19,8 @@ def get_setting(setting_name):
         print(f"Could not read settings: {error}", file=sys.stderr)
         return None
 
-def return_maps():
-    maps_path = get_setting("Map Output")
-    if not maps_path:
-        return []
-
-    maps_dir = Path(maps_path)
-    if not maps_dir.exists():
-        return []
-    return [
-        path.relative_to(maps_dir).as_posix()
-        for path in maps_dir.rglob("*.vmf")
-        if path.is_file()
-    ]
+def return_maps(include_both_paths=False):
+    return load_map_files("Map Output", ".vmf", include_both_paths)
 
 
 def list_maps(maps):
@@ -182,17 +171,13 @@ def window():
 
     def load_selected_map():
         selected_item = map_list.currentItem()
-        maps_path = get_setting("Map Output")
         if selected_item is None:
             widget.selected_map_path = None
             widget.parsed_map = None
             entity_tree.clear()
             entity_tree.setHeaderLabels(["Entity / Property", "Value"])
             return
-        if not maps_path:
-            return
-
-        map_path = Path(maps_path).expanduser() / selected_item.text()
+        map_path = Path(selected_item.data(QtCore.Qt.UserRole))
         try:
             entities_by_class = parse_map(map_path)
         except (OSError, UnicodeDecodeError) as error:

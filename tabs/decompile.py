@@ -3,35 +3,55 @@ import os
 from pathlib import Path
 import sys
 from PySide6 import QtWidgets, QtCore, QtGui
-from tabs.map_browser import MapBrowser
+from tabs.map_browser import MapBrowser, load_map_files
 
 def get_setting(setting_name):
-    settings_path = Path("settings.json")
+    settings_path = Path(__file__).resolve().parents[1] / "settings.json"
     if not settings_path.exists():
         return None
     try:
         with settings_path.open("r", encoding="utf-8") as settings_file:
             data = json.load(settings_file)
-            if setting_name == "Map Output":
-                return data.get("Map Output", data.get("Map Output Path"))
+            if setting_name == "Map Input":
+                return data.get("Map Input", data.get("Map Input Path"))
             return data.get(setting_name)
     except (OSError, json.JSONDecodeError) as error:
         print(f"Could not read settings: {error}", file=sys.stderr)
         return None
 
-def return_maps():
-    maps_path = get_setting("Map Output")
-    if not maps_path:
-        return []
+def return_maps(include_both_paths=False):
+    return load_map_files("Map Input", ".bsp", include_both_paths)
 
-    maps_dir = Path(maps_path)
-    if not maps_dir.exists():
-        return []
-    return [
-        path.relative_to(maps_dir).as_posix()
-        for path in maps_dir.rglob("*.bsp")
-        if path.is_file()
-    ]
+
+class BspFileDropFilter(QtCore.QObject):
+    def __init__(self, add_files, parent=None):
+        super().__init__(parent)
+        self._add_files = add_files
+
+    @staticmethod
+    def bsp_files_from_event(event):
+        if not event.mimeData().hasUrls():
+            return []
+        return [
+            Path(url.toLocalFile()).resolve()
+            for url in event.mimeData().urls()
+            if url.isLocalFile()
+            and Path(url.toLocalFile()).is_file()
+            and Path(url.toLocalFile()).suffix.casefold() == ".bsp"
+        ]
+
+    def eventFilter(self, watched, event):
+        if event.type() in (QtCore.QEvent.DragEnter, QtCore.QEvent.DragMove):
+            if self.bsp_files_from_event(event):
+                event.acceptProposedAction()
+                return True
+        elif event.type() == QtCore.QEvent.Drop:
+            bsp_files = self.bsp_files_from_event(event)
+            if bsp_files:
+                self._add_files(bsp_files)
+                event.acceptProposedAction()
+                return True
+        return super().eventFilter(watched, event)
 
 
 def list_maps(maps):
@@ -48,9 +68,33 @@ def list_maps(maps):
 def window():
     widget = QtWidgets.QWidget()
     layout = QtWidgets.QVBoxLayout(widget)
-    map_browser = MapBrowser(return_maps, widget)
+    dropped_paths = []
+
+    def load_decompile_maps(include_both_paths=False):
+        maps = load_map_files("Map Input", ".bsp", include_both_paths)
+        known_paths = {
+            os.path.normcase(str(Path(entry["path"]).resolve()))
+            for entry in maps
+        }
+        for map_path in dropped_paths:
+            path_key = os.path.normcase(str(map_path))
+            if path_key in known_paths:
+                continue
+            maps.append({
+                "name": f"{map_path.name} ({map_path.parent})",
+                "relative_path": map_path.name,
+                "path": str(map_path),
+                "source": "Dropped",
+            })
+            known_paths.add(path_key)
+        return maps
+
+    map_browser = MapBrowser(load_decompile_maps, widget)
     map_list = map_browser.list_widget
     layout.addWidget(map_browser, stretch=1)
+
+    include_assets_checkbox = QtWidgets.QCheckBox("Include assets from map?", widget)
+    layout.addWidget(include_assets_checkbox)
 
     decompile_button = QtWidgets.QPushButton("Decompile", widget)
     decompile_button.setEnabled(False)
@@ -59,6 +103,25 @@ def window():
     status_label = QtWidgets.QLabel(widget)
     status_label.setWordWrap(True)
     layout.addWidget(status_label)
+
+    def add_dropped_files(paths):
+        for map_path in paths:
+            if map_path not in dropped_paths:
+                dropped_paths.append(map_path)
+        map_browser.refresh()
+        latest_path = paths[-1]
+        for index in range(map_list.count()):
+            item = map_list.item(index)
+            if Path(item.data(QtCore.Qt.UserRole)).resolve() == latest_path:
+                map_list.setCurrentItem(item)
+                break
+        status_label.setText(f"Added {len(paths)} BSP file(s) from drag and drop.")
+
+    drop_filter = BspFileDropFilter(add_dropped_files, map_list)
+    widget.bsp_drop_filter = drop_filter
+    map_list.setAcceptDrops(True)
+    map_list.viewport().setAcceptDrops(True)
+    map_list.viewport().installEventFilter(drop_filter)
 
     process = QtCore.QProcess(widget)
     widget.decompile_process = process
@@ -76,23 +139,43 @@ def window():
     def start_decompile():
         nonlocal output_path
         selected_item = map_list.currentItem()
-        maps_path = get_setting("Map Output")
-        if not selected_item or not maps_path:
-            status_label.setText("Select a map and set the Map Output.")
+        output_directory = get_setting("Map Output")
+        if not selected_item or not output_directory:
+            status_label.setText("Select a map and set the Map Input and Map Output.")
             return
 
-        maps_directory = Path(maps_path).expanduser()
-        map_path = maps_directory / selected_item.text()
-        output_path = map_path.with_suffix(".vmf")
+        map_relative_path = Path(selected_item.data(QtCore.Qt.UserRole + 1))
+        map_path = Path(selected_item.data(QtCore.Qt.UserRole))
+        output_path = Path(output_directory).expanduser() / map_relative_path.with_suffix(".vmf")
+        output_path.parent.mkdir(parents=True, exist_ok=True)
         process_output.clear()
+        bspsrc_arguments = [f"--output={output_path}"]
+        if include_assets_checkbox.isChecked():
+            bspsrc_arguments.append("--unpack_embedded")
+        bspsrc_arguments.append(str(map_path))
+
         if os.name == 'nt':
-            bspsrc_path = get_setting("BSPSRC Path (Windows)")
-            if not bspsrc_path:
-                status_label.setText("Set the BSPSRC Path (Windows) in settings.")
+            jar_setting = get_setting("BSPSRC Jar Path (Windows)")
+            bspsrc_jar = (
+                Path(jar_setting).expanduser()
+                if jar_setting
+                else Path(__file__).with_name("bspsrc-jar-only") / "bspsrc.jar"
+            )
+            if not bspsrc_jar.is_file():
+                status_label.setText(
+                    f"BSPSrc JAR not found: {bspsrc_jar}. Set its path in Settings."
+                )
                 return
-            process.start(bspsrc_path, [f"--output={output_path}", str(map_path)])
+            process.start(
+                "java",
+                [
+                    "-cp",
+                    str(bspsrc_jar),
+                    "info.ata4.bspsrc.app.src.BspSourceLauncher",
+                ] + bspsrc_arguments,
+            )
         else:
-            process.start("bspsrc", [f"--output={output_path}", str(map_path)])
+            process.start("bspsrc", bspsrc_arguments)
         status_label.setText(f"Starting decompile for {selected_item.text()}...")
 
     map_list.itemSelectionChanged.connect(

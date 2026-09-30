@@ -3,6 +3,7 @@ from pathlib import Path
 import sys
 
 from PySide6 import QtWidgets
+from tabs.map_browser import SHOW_BOTH_PATHS_SETTING, paths_differ
 
 # Add a setting for bspsrc exe path
 
@@ -35,6 +36,27 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
         inputs[name] = input_field
         layout.addRow(name, input_field)
 
+    both_paths_checkbox = QtWidgets.QCheckBox("Show maps from both paths", widget)
+    both_paths_checkbox.setChecked(
+        bool(saved_settings.get(SHOW_BOTH_PATHS_SETTING, False))
+    )
+
+    def update_both_paths_visibility():
+        input_path = inputs.get("Map Input")
+        output_path = inputs.get("Map Output")
+        both_paths_checkbox.setVisible(
+            paths_differ(
+                input_path.text() if input_path else None,
+                output_path.text() if output_path else None,
+            )
+        )
+
+    layout.addRow(both_paths_checkbox)
+    update_both_paths_visibility()
+    for name in ("Map Input", "Map Output"):
+        if name in inputs:
+            inputs[name].textChanged.connect(update_both_paths_visibility)
+
     save_button = QtWidgets.QPushButton("Save", widget)
     status_label = QtWidgets.QLabel(widget)
     layout.addRow(save_button)
@@ -52,6 +74,7 @@ def SettingsWindow(input_names=("Setting 1",), json_path="settings.json"):
                 data = {}
 
             data.update({name: field.text() for name, field in inputs.items()})
+            data[SHOW_BOTH_PATHS_SETTING] = both_paths_checkbox.isChecked()
             if "Map Output" in inputs:
                 data.pop("Map Output Path", None)
             with settings_path.open("w", encoding="utf-8") as settings_file:
