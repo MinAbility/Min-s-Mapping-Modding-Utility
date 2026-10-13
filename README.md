@@ -20,4 +20,5 @@ Simplify new options to route from the Portal 2/portal2 directory instead of the
 Allow a way to rename just the VMF/BSP when de/recompiling
 Fix lighting bug when compiling with VRAD
 Possible(?) entity/texture viewer
-
+Update Inno setup to allow for easy removal of the tool
+Add a way for the tool to check for automatic updates
