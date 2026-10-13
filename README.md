@@ -14,11 +14,11 @@ Once both of these are setup you'll be able to use the tool!
 
 
 # TO DO
-Make a file browser to move the file where you want outside the set path
-Open file browser to browse Map Input/Output
-Simplify new options to route from the Portal 2/portal2 directory instead of the bin
-Allow a way to rename just the VMF/BSP when de/recompiling
-Fix lighting bug when compiling with VRAD
-Possible(?) entity/texture viewer
-Update Inno setup to allow for easy removal of the tool
-Add a way for the tool to check for automatic updates
+Make a file browser to move the file where you want outside the set path\n
+Open file browser to browse Map Input/Output\n
+Simplify new options to route from the Portal 2/portal2 directory instead of the bin\n
+Allow a way to rename just the VMF/BSP when de/recompiling\n
+Fix lighting bug when compiling with VRAD\n
+Possible(?) entity/texture viewer\n
+Update Inno setup to allow for easy removal of the tool\n
+Add a way for the tool to check for automatic updates\n
