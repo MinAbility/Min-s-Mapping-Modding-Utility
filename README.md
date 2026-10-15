@@ -22,3 +22,4 @@ Once both of these are setup you'll be able to use the tool!
 - Possible(?) entity/texture viewer
 - Update Inno setup to allow for easy removal of the tool
 - Add a way for the tool to check for automatic updates
+- Allow other compilers like Hammer++’s form of VRAD and shit
